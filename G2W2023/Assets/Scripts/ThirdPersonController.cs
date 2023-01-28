@@ -177,13 +177,14 @@ namespace StarterAssets
                  GroundedCheck();
                  Move();
                  SwitchCheck ();
+                  CameraRotation();
 
                 //  if (playerNum == 0){
                 //     onRamp = checkIfOnSlope(transform.position,new Vector3(0,1,0),10);
                 //  }
             } else {
                _input.move = new Vector2(0,0);
-               _input.look = new Vector2(0,0);
+              // _input.look = new Vector2(0,0);
                _input.jump = false;
                _input.sprint = false;
             }
@@ -207,7 +208,7 @@ namespace StarterAssets
 
         private void LateUpdate()
         {
-            CameraRotation();
+           
         }
 
         private void AssignAnimationIDs()
@@ -275,7 +276,7 @@ namespace StarterAssets
             if (_input.look.sqrMagnitude >= _threshold && !LockCameraPosition)
             {
                 //Don't multiply mouse input by Time.deltaTime;
-                float deltaTimeMultiplier = IsCurrentDeviceMouse ? 1.0f : Time.deltaTime;
+                float deltaTimeMultiplier = 1.0f ;
 
                 _cinemachineTargetYaw += _input.look.x * deltaTimeMultiplier;
                 _cinemachineTargetPitch += _input.look.y * deltaTimeMultiplier;

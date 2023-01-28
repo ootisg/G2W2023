@@ -39,7 +39,9 @@ namespace StarterAssets
 				GameObject [] players =  GameObject.FindGameObjectsWithTag("Player");
 			
 				for (int i = 0; i < players.Length; i++){
-					players[i].GetComponent<StarterAssetsInputs>().LookInput(value.Get<Vector2>());
+					if(players[i].GetComponent<ThirdPersonController>().isSelected){
+						players[i].GetComponent<StarterAssetsInputs>().LookInput(value.Get<Vector2>());
+					}
 				}
 				
 			}
