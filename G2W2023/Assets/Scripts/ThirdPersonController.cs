@@ -32,7 +32,7 @@ namespace StarterAssets
 
         [Space(10)]
         [Tooltip("The height the player can jump")]
-        public float JumpHeight = 1.2f;
+        private float JumpHeight = 2.4f;
 
         [Tooltip("The character uses its own gravity value. The engine default is -9.81f")]
         public float Gravity = -15.0f;
@@ -75,7 +75,7 @@ namespace StarterAssets
 
         public bool isSelected;
 
-        public int playerNum; // 0 is scooter 1 is matrix 2 captn win'ra
+        public int playerNum; // 0 is scooter 1 is capin win'rar 2 matrix
 
 
         // cinemachine
@@ -101,13 +101,17 @@ namespace StarterAssets
         private int _animIDFreeFall;
         private int _animIDMotionSpeed;
 
+        private bool onRamp;
+        private int dashTime = 0;
+        private bool doneDash = false;
+
 
 
 #if ENABLE_INPUT_SYSTEM && STARTER_ASSETS_PACKAGES_CHECKED
         private PlayerInput _playerInput;
 #endif
         private Animator _animator;
-        private CharacterController _controller;
+        public CharacterController _controller;
         private StarterAssetsInputs _input;
         private GameObject _mainCamera;
 
@@ -173,6 +177,10 @@ namespace StarterAssets
                  GroundedCheck();
                  Move();
                  SwitchCheck ();
+
+                //  if (playerNum == 0){
+                //     onRamp = checkIfOnSlope(transform.position,new Vector3(0,1,0),10);
+                //  }
             } else {
                _input.move = new Vector2(0,0);
                _input.look = new Vector2(0,0);
@@ -211,13 +219,21 @@ namespace StarterAssets
             _animIDMotionSpeed = Animator.StringToHash("MotionSpeed");
         }
 
+        
+
         private void GroundedCheck()
         {
             // set sphere position, with offset
             Vector3 spherePosition = new Vector3(transform.position.x, transform.position.y - GroundedOffset,
                 transform.position.z);
+
+            bool oldGrounded = Grounded;
             Grounded = Physics.CheckSphere(spherePosition, GroundedRadius, GroundLayers,
                 QueryTriggerInteraction.Ignore);
+
+            if (oldGrounded && !Grounded && playerNum == 0){
+                _verticalVelocity =  new Vector3(_controller.velocity.x, 0.0f, _controller.velocity.z).magnitude / 4f; //scooters height is affected by his speed leaving the ground
+            }
 
             // update animator if using character
             if (_hasAnimator)
@@ -225,6 +241,33 @@ namespace StarterAssets
                 _animator.SetBool(_animIDGrounded, Grounded);
             }
         }
+
+        //  bool checkIfOnSlope(Vector3 position, Vector3 desiredDirection, float distance)
+        // {
+        //         float slopeThreshold = 0.1f;
+
+        //         Ray myRay = new Ray(position, desiredDirection); // cast a Ray from the position of our gameObject into our desired direction. Add the slopeRayHeight to the Y parameter.
+   
+        //         RaycastHit hit;
+
+        //         if (Physics.Raycast(myRay, out hit, distance))
+        //         {
+
+        //             if (hit.collider.gameObject.tag == "Ground") // Our Ray has hit the ground
+        //             {
+        //               float slopeAngle = Mathf.Deg2Rad * Vector3.Angle(Vector3.up, hit.normal); // Here we get the angle between the Up Vector and the normal of the wall we are checking against: 90 for straight up walls, 0 for flat ground.
+                     
+        //               if (slopeAngle > slopeThreshold){
+        //                 return true;
+        //               } else {
+        //                 return false;
+        //               }
+   
+        //            }
+   
+        //         }
+        //         return false;
+        // }
 
         private void CameraRotation()
         {
@@ -265,8 +308,8 @@ namespace StarterAssets
             float inputMagnitude = _input.analogMovement ? _input.move.magnitude : 1f;
 
             // accelerate or decelerate to target speed
-            if (currentHorizontalSpeed < targetSpeed - speedOffset ||
-                currentHorizontalSpeed > targetSpeed + speedOffset)
+            if ((currentHorizontalSpeed < targetSpeed - speedOffset ||
+                currentHorizontalSpeed > targetSpeed + speedOffset) && dashTime == 0)
             {
                 // creates curved result rather than a linear one giving a more organic speed change
                 // note T in Lerp is clamped, so we don't need to clamp our speed
@@ -275,10 +318,14 @@ namespace StarterAssets
 
                 // round speed to 3 decimal places
                 _speed = Mathf.Round(_speed * 1000f) / 1000f;
+                
             }
             else
             {
                 _speed = targetSpeed;
+                if (dashTime != 0){
+                    _speed = targetSpeed * 4;
+                }
             }
 
             _animationBlend = Mathf.Lerp(_animationBlend, targetSpeed, Time.deltaTime * SpeedChangeRate);
@@ -289,7 +336,7 @@ namespace StarterAssets
 
             // note: Vector2's != operator uses approximation so is not floating point error prone, and is cheaper than magnitude
             // if there is a move input rotate player when the player is moving
-            if (_input.move != Vector2.zero)
+            if (_input.move != Vector2.zero && dashTime == 0)
             {
                 _targetRotation = Mathf.Atan2(inputDirection.x, inputDirection.z) * Mathf.Rad2Deg +
                                   _mainCamera.transform.eulerAngles.y;
@@ -300,11 +347,15 @@ namespace StarterAssets
                 transform.rotation = Quaternion.Euler(0.0f, rotation, 0.0f);
             }
 
+            if (dashTime != 0){
+                dashTime = dashTime - 1;
+            }
 
             Vector3 targetDirection = Quaternion.Euler(0.0f, _targetRotation, 0.0f) * Vector3.forward;
 
+           
             // move the player
-            _controller.Move(targetDirection.normalized * (_speed * Time.deltaTime) +
+           _controller.Move(targetDirection.normalized * (_speed * Time.deltaTime) +
                              new Vector3(0.0f, _verticalVelocity, 0.0f) * Time.deltaTime);
 
             // update animator if using character
@@ -319,6 +370,8 @@ namespace StarterAssets
         {
             if (Grounded)
             {
+                doneDash = false;
+                dashTime = 0;
                 // reset the fall timeout timer
                 _fallTimeoutDelta = FallTimeout;
 
@@ -346,6 +399,7 @@ namespace StarterAssets
                     {
                         _animator.SetBool(_animIDJump, true);
                     }
+                    _input.jump = false;
                 }
 
                 // jump timeout
@@ -356,6 +410,11 @@ namespace StarterAssets
             }
             else
             {
+
+                if (playerNum == 1 && _input.jump && !doneDash){
+                    dashTime = 90;
+                    doneDash = true;
+                 }
                 // reset the jump timeout timer
                 _jumpTimeoutDelta = JumpTimeout;
 
@@ -378,9 +437,13 @@ namespace StarterAssets
             }
 
             // apply gravity over time if under terminal (multiply by delta time twice to linearly speed up over time)
-            if (_verticalVelocity < _terminalVelocity)
+            if (_verticalVelocity < _terminalVelocity && dashTime == 0)
             {
-                _verticalVelocity += Gravity * Time.deltaTime;
+                if (playerNum == 0){
+                    _verticalVelocity += ((Gravity * Time.deltaTime) * .3f);
+                } else {
+                    _verticalVelocity += (Gravity * Time.deltaTime);
+                }
             }
         }
 
