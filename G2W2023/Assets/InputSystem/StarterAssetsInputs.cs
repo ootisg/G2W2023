@@ -12,6 +12,7 @@ namespace StarterAssets
 		public Vector2 look;
 		public bool jump;
 		public bool sprint;
+		public bool swtch;
 
 		[Header("Movement Settings")]
 		public bool analogMovement;
@@ -23,25 +24,53 @@ namespace StarterAssets
 #if ENABLE_INPUT_SYSTEM && STARTER_ASSETS_PACKAGES_CHECKED
 		public void OnMove(InputValue value)
 		{
-			MoveInput(value.Get<Vector2>());
+			GameObject [] players =  GameObject.FindGameObjectsWithTag("Player");
+			
+			for (int i = 0; i < players.Length; i++){
+				players[i].GetComponent<StarterAssetsInputs>().MoveInput(value.Get<Vector2>());
+			}
+			
 		}
 
 		public void OnLook(InputValue value)
 		{
 			if(cursorInputForLook)
 			{
-				LookInput(value.Get<Vector2>());
+				GameObject [] players =  GameObject.FindGameObjectsWithTag("Player");
+			
+				for (int i = 0; i < players.Length; i++){
+					players[i].GetComponent<StarterAssetsInputs>().LookInput(value.Get<Vector2>());
+				}
+				
 			}
 		}
 
 		public void OnJump(InputValue value)
 		{
-			JumpInput(value.isPressed);
+			GameObject [] players =  GameObject.FindGameObjectsWithTag("Player");
+			
+			for (int i = 0; i < players.Length; i++){
+				players[i].GetComponent<StarterAssetsInputs>().JumpInput(value.isPressed);
+			}
+			
 		}
 
 		public void OnSprint(InputValue value)
 		{
-			SprintInput(value.isPressed);
+			GameObject [] players =  GameObject.FindGameObjectsWithTag("Player");
+			
+			for (int i = 0; i < players.Length; i++){
+				players[i].GetComponent<StarterAssetsInputs>().SprintInput(value.isPressed);
+			}
+			
+		}
+
+		public void OnSwitch (InputValue value){
+			GameObject [] players =  GameObject.FindGameObjectsWithTag("Player");
+			
+			for (int i = 0; i < players.Length; i++){
+				players[i].GetComponent<StarterAssetsInputs>().SwitchInput(value.isPressed);
+			}
 		}
 #endif
 
@@ -64,6 +93,11 @@ namespace StarterAssets
 		public void SprintInput(bool newSprintState)
 		{
 			sprint = newSprintState;
+		}
+
+		public void SwitchInput(bool newSwitchState)
+		{
+			swtch = newSwitchState;
 		}
 
 		private void OnApplicationFocus(bool hasFocus)

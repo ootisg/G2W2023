@@ -1,4 +1,5 @@
 ﻿using UnityEngine;
+using Cinemachine;
 #if ENABLE_INPUT_SYSTEM && STARTER_ASSETS_PACKAGES_CHECKED
 using UnityEngine.InputSystem;
 #endif
@@ -16,10 +17,7 @@ namespace StarterAssets
     {
         [Header("Player")]
         [Tooltip("Move speed of the character in m/s")]
-        public float MoveSpeed = 2.0f;
-
-        [Tooltip("Sprint speed of the character in m/s")]
-        public float SprintSpeed = 5.335f;
+        private float MovementSpeed = 5.6f;
 
         [Tooltip("How fast the character turns to face movement direction")]
         [Range(0.0f, 0.3f)]
@@ -75,6 +73,11 @@ namespace StarterAssets
         [Tooltip("For locking the camera position on all axis")]
         public bool LockCameraPosition = false;
 
+        public bool isSelected;
+
+        public int playerNum; // 0 is scooter 1 is matrix 2 captn win'ra
+
+
         // cinemachine
         private float _cinemachineTargetYaw;
         private float _cinemachineTargetPitch;
@@ -98,6 +101,8 @@ namespace StarterAssets
         private int _animIDFreeFall;
         private int _animIDMotionSpeed;
 
+
+
 #if ENABLE_INPUT_SYSTEM && STARTER_ASSETS_PACKAGES_CHECKED
         private PlayerInput _playerInput;
 #endif
@@ -109,6 +114,8 @@ namespace StarterAssets
         private const float _threshold = 0.01f;
 
         private bool _hasAnimator;
+
+       
 
         private bool IsCurrentDeviceMouse
         {
@@ -147,6 +154,11 @@ namespace StarterAssets
 
             AssignAnimationIDs();
 
+            if (playerNum == 0){
+                MovementSpeed = 15;
+            }
+
+
             // reset our timeouts on start
             _jumpTimeoutDelta = JumpTimeout;
             _fallTimeoutDelta = FallTimeout;
@@ -156,9 +168,33 @@ namespace StarterAssets
         {
             _hasAnimator = TryGetComponent(out _animator);
 
-            JumpAndGravity();
-            GroundedCheck();
-            Move();
+            if (isSelected){
+                 JumpAndGravity();
+                 GroundedCheck();
+                 Move();
+                 SwitchCheck ();
+            } else {
+               _input.move = new Vector2(0,0);
+               _input.look = new Vector2(0,0);
+               _input.jump = false;
+               _input.sprint = false;
+            }
+        }
+
+        private void SwitchCheck(){
+            if (_input.swtch){
+                isSelected = false;
+                GameObject [] players =  GameObject.FindGameObjectsWithTag("Player");
+			
+			    for (int i = 0; i < players.Length; i++){
+                    players[i].GetComponent<StarterAssetsInputs>().swtch = false;
+				    if (players[i].GetComponent<ThirdPersonController>().playerNum == (playerNum + 1)%3){
+                        players[i].GetComponent<ThirdPersonController>().isSelected = true;
+                        GameObject [] camera = GameObject.FindGameObjectsWithTag("playerCamera");
+                        camera[0].GetComponent<CinemachineVirtualCamera>().Follow = players[i].GetComponent<ThirdPersonController>().CinemachineCameraTarget.transform;
+                    } 
+			    }
+            }
         }
 
         private void LateUpdate()
@@ -214,7 +250,7 @@ namespace StarterAssets
         private void Move()
         {
             // set target speed based on move speed, sprint speed and if sprint is pressed
-            float targetSpeed = _input.sprint ? SprintSpeed : MoveSpeed;
+            float targetSpeed = MovementSpeed;
 
             // a simplistic acceleration and deceleration designed to be easy to remove, replace, or iterate upon
 
@@ -300,7 +336,7 @@ namespace StarterAssets
                 }
 
                 // Jump
-                if (_input.jump && _jumpTimeoutDelta <= 0.0f)
+                if (_input.jump && _jumpTimeoutDelta <= 0.0f && playerNum == 1)
                 {
                     // the square root of H * -2 * G = how much velocity needed to reach desired height
                     _verticalVelocity = Mathf.Sqrt(JumpHeight * -2f * Gravity);
